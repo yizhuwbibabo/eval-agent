@@ -1,0 +1,36 @@
+behavior_id: error_guided_correction
+name: Error-guided Correction
+description: >-
+  The agent failed to apply a correction explicitly suggested by a tool error
+  and instead repeated the failing operation.
+behavior_frame: FAILURE
+anchor_definition:
+  anchor_type: error_instruction
+  params:
+    instruction_keys: [suggested_fix, correction, suggested_correction]
+confirmation_criteria:
+  description: >-
+    Confirm that the tool error stated an explicit correction and that the
+    source agent's next turn did not apply it.
+  required_evidence_min: 2
+cut_contract:
+  mode: FAILURE
+  context_events: 8
+  drop_target_response: true
+rubric:
+  rubric_id: error_guided_correction_rubric
+  version: v1
+  description: >-
+    Apply the correction suggested by the tool error instead of repeating the
+    failing operation.
+  pass_threshold: 4.0
+  criteria:
+    - criterion_id: error_correction_applied
+      description: The response applies the correction suggested by the tool error.
+      weight: 1.0
+    - criterion_id: no_repeat_of_failing_operation
+      description: The response does not repeat the failing operation unchanged.
+      weight: 1.0
+severity: high
+specification_version: "1.0"
+metadata: {}

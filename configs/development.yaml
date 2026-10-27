@@ -1,0 +1,33 @@
+# Development evaluation config - fully offline (mock models).
+evaluation:
+  dataset: agent_behavior_v1
+  dataset_version: v1
+  mode: decision_point
+  trials_per_instance: 3
+
+models:
+  - id: model_a
+    provider_model: mock/compliant
+    provider: mock
+  - id: model_b
+    provider_model: mock/error_prone
+    provider: mock
+  - id: model_c
+    provider_model: mock/wrong_tool
+    provider: mock
+
+generation:
+  temperature: 0
+  max_output_tokens: 4096
+
+execution:
+  concurrency: 4
+  timeout_seconds: 120
+  retry_attempts: 3
+  retry_backoff_base: 2.0
+
+grading:
+  strategy: hybrid
+  pass_threshold: 4.0
+  judge: mock
+  judge_version: v1

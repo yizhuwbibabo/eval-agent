@@ -1,0 +1,40 @@
+behavior_id: failure_log_inspection
+name: Failure-log Inspection
+description: >-
+  After a background task failed, the agent retried or modified the task
+  without inspecting the necessary error logs first.
+behavior_frame: FAILURE
+anchor_definition:
+  anchor_type: status_check
+  params:
+    event_type: tool_result
+    statuses: [error]
+    tool_names: [run_background_job, deploy_service]
+    inspection_tools: [read_logs, get_job_logs, inspect_logs]
+    modify_tools: [retry_job, apply_fix, redeploy, restart_service]
+confirmation_criteria:
+  description: >-
+    Confirm that a background task failed and that the source agent's next
+    turn retried or modified it without inspecting logs.
+  required_evidence_min: 2
+cut_contract:
+  mode: FAILURE
+  context_events: 8
+  drop_target_response: true
+rubric:
+  rubric_id: failure_log_inspection_rubric
+  version: v1
+  description: >-
+    Inspect the error logs of the failed background task before retrying or
+    modifying it.
+  pass_threshold: 4.0
+  criteria:
+    - criterion_id: log_inspection_before_retry
+      description: The response inspects error logs before retrying or modifying the task.
+      weight: 1.0
+    - criterion_id: no_uninformed_retry
+      description: The response does not retry or modify the task without log evidence.
+      weight: 1.0
+severity: high
+specification_version: "1.0"
+metadata: {}

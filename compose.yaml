@@ -1,0 +1,33 @@
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: agentevalops
+      POSTGRES_PASSWORD: agentevalops
+      POSTGRES_DB: agentevalops
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U agentevalops"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  app:
+    build: .
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      AGENTEVALOPS_DATABASE_URL: postgresql+psycopg://agentevalops:agentevalops@postgres:5432/agentevalops
+      AGENTEVALOPS_ARTIFACT_ROOT: /app/reports
+    volumes:
+      - ./reports:/app/reports
+      - ./datasets:/app/datasets
+    # Default command prints help; override to run a pipeline command.
+    command: ["--help"]
+
+volumes:
+  pgdata:

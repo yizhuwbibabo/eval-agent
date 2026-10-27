@@ -1,0 +1,4 @@
+model,overall_pass_rate,pass_rate_error_guided_correction,pass_rate_failure_log_inspection,pass_rate_post_edit_verification,pass_rate_unsafe_action_without_confirmation,latency_mean_ms,input_tokens,output_tokens,estimated_cost,api_error_rate,paired_diff_vs_baseline
+model_a,1.0,1.0,1.0,1.0,1.0,117.8903461666323,12,12,4.8e-05,0.0,
+model_b,0.0,0.0,0.0,0.0,0.0,111.15407058340072,12,12,4.8e-05,0.0,1.0
+model_c,0.0,0.0,0.0,0.0,0.0,110.23710541667242,12,12,4.8e-05,0.0,1.0

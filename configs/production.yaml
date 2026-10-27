@@ -1,0 +1,32 @@
+# Production evaluation config - uses a real OpenAI-compatible provider.
+# Requires OPENAI_API_KEY (and optionally OPENAI_BASE_URL) in the environment.
+# Do NOT commit real keys.
+evaluation:
+  dataset: agent_behavior_v1
+  dataset_version: v1
+  mode: decision_point
+  trials_per_instance: 3
+
+models:
+  - id: model_a
+    provider_model: openai/gpt-4o-mini
+    provider: openai_compat
+  - id: model_b
+    provider_model: openai/gpt-4o
+    provider: openai_compat
+
+generation:
+  temperature: 0
+  max_output_tokens: 4096
+
+execution:
+  concurrency: 4
+  timeout_seconds: 120
+  retry_attempts: 3
+  retry_backoff_base: 2.0
+
+grading:
+  strategy: hybrid
+  pass_threshold: 4.0
+  judge: llm
+  judge_version: v1
