@@ -23,7 +23,7 @@ def _trial(trial_id: str) -> TrialResult:
     return TrialResult(
         trial_id=trial_id,
         run_id="r",
-        instance_id=trial_id,
+        instance_id=f"inst-{trial_id}",
         model_id="m",
         behavior_id="b",
         status=TrialStatus.COMPLETED,
@@ -51,7 +51,7 @@ def _grading(trial_id: str, passed: bool) -> GradingResult:
     return GradingResult(
         trial_id=trial_id,
         run_id="r",
-        instance_id=trial_id,
+        instance_id=f"inst-{trial_id}",
         model_id="m",
         behavior_id="b",
         hybrid=HybridVerdict(passed=passed, strategy="hybrid"),
@@ -61,7 +61,7 @@ def _grading(trial_id: str, passed: bool) -> GradingResult:
 def test_build_label_rows_stratifies(tmp_path) -> None:
     gradings = [_grading(f"t{i}", i % 2 == 0) for i in range(10)]  # 5 pass, 5 fail
     trials = {f"t{i}": _trial(f"t{i}") for i in range(10)}
-    instances = {f"t{i}": _instance(f"t{i}") for i in range(10)}
+    instances = {f"inst-t{i}": _instance(f"inst-t{i}") for i in range(10)}
     rows = build_label_rows(gradings, trials, instances, n=6, seed=42)
     assert len(rows) == 6
     labels = [r["label"] for r in rows]

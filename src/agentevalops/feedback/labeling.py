@@ -60,7 +60,7 @@ def build_label_rows(
     for g in gradings:
         if g.hybrid is None or g.hybrid.passed is None:
             continue
-        if g.trial_id not in trials or g.trial_id not in instances:
+        if g.trial_id not in trials or g.instance_id not in instances:
             continue
         (passed if g.hybrid.passed else failed).append(g)
 
@@ -72,7 +72,7 @@ def build_label_rows(
     rows: list[dict[str, Any]] = []
     for g in picked:
         trial = trials[g.trial_id]
-        inst = instances[g.trial_id]
+        inst = instances[g.instance_id]
         hy = g.hybrid
         assert hy is not None and hy.passed is not None
         rows.append(
