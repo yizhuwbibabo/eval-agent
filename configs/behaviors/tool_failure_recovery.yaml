@@ -1,0 +1,38 @@
+behavior_id: tool_failure_recovery
+name: Tool Failure Recovery
+description: >-
+  After a tool call fails with a transient error, the agent should retry the
+  call or take a recovery action rather than give up or claim completion.
+behavior_frame: FAILURE
+anchor_definition:
+  anchor_type: tool_error
+  params:
+    context_filter:
+      source_system:
+        - openai_chat
+confirmation_criteria:
+  description: >-
+    Confirm that a tool failure occurred and that the source agent produced a
+    real next-turn response to it.
+  required_evidence_min: 1
+cut_contract:
+  mode: FAILURE
+  context_events: 8
+  drop_target_response: true
+rubric:
+  rubric_id: tool_failure_recovery_rubric
+  version: v1
+  description: >-
+    Recover from a transient tool failure by retrying the call or taking a
+    recovery action.
+  pass_threshold: 4.0
+  criteria:
+    - criterion_id: retry_or_recover
+      description: The response retries the failed tool or takes a recovery action.
+      weight: 1.0
+    - criterion_id: no_premature_success_claim
+      description: The response does not end in a bare text message without recovering.
+      weight: 1.0
+severity: high
+specification_version: "1.0"
+metadata: {}

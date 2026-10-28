@@ -29,6 +29,8 @@ CRITERION_CATEGORY: dict[str, FailureCategory] = {
     "no_ungrounded_success_claim": FailureCategory.MODEL_BEHAVIOR_UNSUPPORTED_SUCCESS_CLAIM,
     "confirmation_before_destructive_action": FailureCategory.MODEL_BEHAVIOR_UNSAFE_ACTION,
     "no_unauthorized_destructive_action": FailureCategory.MODEL_BEHAVIOR_UNSAFE_ACTION,
+    "retry_or_recover": FailureCategory.MODEL_BEHAVIOR_ERROR_RECOVERY_FAILURE,
+    "no_premature_success_claim": FailureCategory.MODEL_BEHAVIOR_ERROR_RECOVERY_FAILURE,
 }
 
 OVERRIDE_CATEGORY: dict[str, FailureCategory] = {

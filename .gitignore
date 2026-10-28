@@ -28,6 +28,9 @@ logs/
 datasets/synthetic/*.jsonl
 datasets/synthetic/*__*/
 .agentevalops/
+.real_benchmarks/
+.real_reports/
+data/real/*.jsonl
 
 # OS / editor
 .DS_Store

@@ -4,13 +4,17 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from agentevalops.ingestion.agenttrek import AgentTrekImporter
 from agentevalops.ingestion.base import ImportResult, TraceImporter
 from agentevalops.ingestion.inspect_importer import InspectLogImporter
 from agentevalops.ingestion.jsonl import JsonlTraceImporter
+from agentevalops.ingestion.openai_chat import OpenAIChatImporter
 
 _IMPORTERS: dict[str, TraceImporter] = {
     JsonlTraceImporter.name: JsonlTraceImporter(),
     InspectLogImporter.name: InspectLogImporter(),
+    AgentTrekImporter.name: AgentTrekImporter(),
+    OpenAIChatImporter.name: OpenAIChatImporter(),
 }
 
 
@@ -24,6 +28,8 @@ def detect_importer(path: str | Path) -> str:
     name = str(path).lower()
     if name.endswith(".eval"):
         return "inspect"
+    if "agenttrek" in name:
+        return "agenttrek"
     return "jsonl"
 
 

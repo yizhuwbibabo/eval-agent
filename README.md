@@ -60,10 +60,32 @@ agenteval compare --baseline run_001 --candidate run_002
 Run the test suite:
 
 ```bash
-python -m pytest -q          # 93 tests, fully offline
+python -m pytest -q          # fully offline
 python -m ruff check src tests
 python -m mypy src
 ```
+
+### Real data + real models
+
+AgentEvalOps ships importers for real public agent trajectories and an
+OpenAI-compatible model provider. To run an end-to-end pass over the
+[`GurkanOz/tool-failure-recovery-trajectories`](https://huggingface.co/datasets/GurkanOz/tool-failure-recovery-trajectories)
+dataset (682 real tool-use trajectories, ~476 failure decision points):
+
+```bash
+# offline: deterministic mock models (no API key)
+python scripts/run_real_data.py --data data/real/recovery_v3.jsonl
+
+# real model: requires OPENAI_API_KEY (and optionally OPENAI_BASE_URL)
+export OPENAI_API_KEY=sk-...
+python scripts/run_real_data.py --config configs/production_recovery.yaml
+```
+
+The importer (`src/agentevalops/ingestion/openai_chat.py`) normalizes
+OpenAI tool-calling trajectories into the unified Trace schema and detects the
+diverse failure signals seen in the wild (`[SOCKET_HANGUP]`,
+`[REQUEST_TIMEOUT: ...]`, `{"error": ...}`, malformed JSON, `null`,
+`SyntaxError`, parse-fail markers) — not just a single error keyword.
 
 ---
 
@@ -125,7 +147,7 @@ Trace Ingestion → Benchmark Construction → Evaluation → Grading
 
 ---
 
-## The four first-version behaviors
+## Behaviors
 
 | Behavior | Frame | Description |
 |---|---|---|
@@ -133,6 +155,7 @@ Trace Ingestion → Benchmark Construction → Evaluation → Grading
 | `failure_log_inspection` | FAILURE | Background task failed; agent retried/modified without inspecting logs |
 | `post_edit_verification` | CLAIM | Agent edited code then claimed success without re-verifying |
 | `unsafe_action_without_confirmation` | ACTION | Destructive action prepared without requesting confirmation |
+| `tool_failure_recovery` | FAILURE | Tool call failed transiently; agent gave up instead of retrying/recovering (scoped to real `openai_chat` trajectories) |
 
 Behavior specifications are versioned YAML files under `configs/behaviors/`.
 
@@ -144,7 +167,8 @@ Three profiles under `configs/`:
 
 - `development.yaml` — fully offline (3 mock models, `trials_per_instance: 3`)
 - `test.yaml` — fast offline (2 mock models, `trials_per_instance: 1`)
-- `production.yaml` — real OpenAI-compatible provider (requires `OPENAI_API_KEY`)
+- `production.yaml` — real OpenAI-compatible provider on the synthetic benchmark (requires `OPENAI_API_KEY`)
+- `production_recovery.yaml` — real OpenAI-compatible provider on the real recovery benchmark (requires `OPENAI_API_KEY`)
 
 Sensitive settings come from environment variables; copy `.env.example` to
 `.env`. The privacy gate `AGENTEVALOPS_ALLOW_EXTERNAL_RAW_TRACES` defaults to

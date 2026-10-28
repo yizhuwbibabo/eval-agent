@@ -20,7 +20,20 @@ def create_engine_from_url(url: str) -> Engine:
                 from pathlib import Path
 
                 Path(db_path).parent.mkdir(parents=True, exist_ok=True)
-        return create_engine(url, connect_args={"check_same_thread": False}, future=True)
+        engine = create_engine(url, connect_args={"check_same_thread": False}, future=True)
+        # WAL + relaxed synchronous trades a small amount of durability for
+        # dramatically lower write latency under per-trial checkpoint commits,
+        # while remaining crash-safe for a single-process evaluator.
+        from sqlalchemy import event
+
+        @event.listens_for(engine, "connect")
+        def _set_sqlite_pragmas(dbapi_connection, _record) -> None:  # noqa: ANN001
+            cursor = dbapi_connection.cursor()
+            cursor.execute("PRAGMA journal_mode=WAL")
+            cursor.execute("PRAGMA synchronous=NORMAL")
+            cursor.close()
+
+        return engine
     return create_engine(url, future=True, pool_pre_ping=True)
 
 

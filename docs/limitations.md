@@ -13,8 +13,12 @@ from current data, so the system's claims stay honest.
 - **Large-scale human review UI** — human review is a CLI + persistence
   workflow, not a web UI.
 - **Real-model evaluation** — the offline path uses mock models. A real
-  OpenAI-compatible provider is wired in but requires an API key; no real model
-  run is claimed.
+  OpenAI-compatible provider is wired in (`openai_compat`, via
+  `OPENAI_API_KEY` / `OPENAI_BASE_URL`) and a production config is provided, but
+  no real-model run is claimed; results in this repository are mock-model only.
+- **Real LLM judge** — `judge: llm` requires wiring a `TextCompletionBackend`;
+  production configs use the offline rubric judge (`judge: mock`) in the hybrid
+  grader.
 - **Embedding-based failure clustering** — clustering is over structured
   attributes only; no unverified semantic similarity is used.
 - **Full OpenTelemetry export** — a lightweight tracer exists; OTel SDK wiring
@@ -30,8 +34,26 @@ from current data, so the system's claims stay honest.
 - **Statistical significance** — the synthetic dataset has few instances per
   behavior; bootstrap CIs are wide and conclusions about model ranking are
   unstable. Real-model comparisons require a larger, independent held-out set.
-- **Production behavior** — all shipped data is `dataset_source="synthetic"` and
-  is never presented as production traces.
+- **Production behavior** — all *synthetic* data is `dataset_source="synthetic"` and
+  is never presented as production traces. Real public trajectories are labeled
+  `source_type="real"` and keep their provenance metadata.
+
+## Public dataset caveats
+
+- **AgentTrek is step-level** (`xlangai/AgentTrek`): each record is a single
+  `system` + `user` + `assistant` triple with the action embedded in assistant
+  content as `<action> fn(args) </action>`. It has no tool-result loop and no
+  failure/verification structure, so it cannot supply the four first-version
+  failure behaviors. The `AgentTrekImporter` maps it to single-turn traces
+  (ACTION-frame decision points only) rather than fabricating results.
+- **Recovery trajectories carry PII-shaped email addresses**
+  (`GurkanOz/tool-failure-recovery-trajectories`): email-domain records contain
+  synthetic addresses in tool arguments. The redaction/quality layer correctly
+  quarantines these 79/682 records; `scripts/run_real_data.py` excludes
+  quarantined traces from benchmark construction.
+- **`tool_failure_recovery` is scoped to `openai_chat` traces** via its
+  `context_filter`, so it is not exercised by the synthetic `mock_agent`
+  dataset (which covers the other four behaviors).
 
 ## Inspect adapter caveats
 

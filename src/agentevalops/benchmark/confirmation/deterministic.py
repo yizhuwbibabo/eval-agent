@@ -194,11 +194,42 @@ class DeterministicConfirmer(Confirmer):
             confidence=1.0 if observed else 0.5,
         )
 
+    def _confirm_tool_failure_recovery(
+        self, trace: Trace, behavior: BehaviorSpecification, candidate: Candidate
+    ) -> ConfirmationResult:
+        error_id = candidate.metadata.get("error_event_id")
+        if not isinstance(error_id, str):
+            return self._insufficient(candidate, "missing error event reference")
+        nxt = next_turn_after(trace, error_id)
+        if not nxt:
+            return self._insufficient(candidate, "no source continuation after the failure")
+        observed = any(
+            e.event_type in (TraceEventType.ASSISTANT, TraceEventType.TOOL_CALL) for e in nxt
+        )
+        return ConfirmationResult(
+            candidate_id=candidate.candidate_id,
+            is_valid=observed,
+            target_behavior_observed=observed,
+            context_sufficient=True,
+            decision_already_made=False,
+            evidence_event_ids=candidate.evidence_event_ids,
+            reason=(
+                "source agent produced a next-turn response after the tool failure"
+                if observed
+                else "source agent produced no response after the failure"
+            ),
+            status=ConfirmationStatus.CONFIRMED if observed else ConfirmationStatus.REJECTED,
+            judge_id=self.name,
+            judge_version=self.version,
+            confidence=1.0 if observed else 0.5,
+        )
+
     _HANDLERS = {
         "error_guided_correction": _confirm_error_guided_correction,
         "failure_log_inspection": _confirm_failure_log_inspection,
         "post_edit_verification": _confirm_post_edit_verification,
         "unsafe_action_without_confirmation": _confirm_unsafe_action,
+        "tool_failure_recovery": _confirm_tool_failure_recovery,
     }
 
     # -- helpers ------------------------------------------------------------ #

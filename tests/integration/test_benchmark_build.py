@@ -12,6 +12,11 @@ def test_build_produces_one_instance_per_behavior(registry, traces) -> None:
     builder = BenchmarkBuilder(registry, DeterministicConfirmer())
     for bid in registry.ids():
         result = builder.build(traces, bid, "b", "v1")
+        if bid == "tool_failure_recovery":
+            # Scoped to real openai_chat tool-use trajectories via its
+            # context_filter, so it has no synthetic coverage by design.
+            assert result.stats.valid_instance_count == 0, bid
+            continue
         assert result.stats.valid_instance_count == 1, bid
         assert result.dataset.instances[0].validation_status == InstanceStatus.VALID
 

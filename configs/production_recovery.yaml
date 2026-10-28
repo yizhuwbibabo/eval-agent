@@ -1,0 +1,36 @@
+# Real-data + real-model production config (requires an API key).
+#
+# Usage:
+#   export OPENAI_API_KEY=sk-...            # required
+#   export OPENAI_BASE_URL=https://...       # optional; defaults to api.openai.com
+#   python scripts/run_real_data.py --config configs/production_recovery.yaml
+#
+# Do NOT commit real keys. The `judge` is kept at "mock" (offline rubric judge)
+# because a real LLM judge requires wiring a TextCompletionBackend; hybrid
+# grading still combines deterministic rules with the rubric judge.
+evaluation:
+  dataset: recovery_v3
+  dataset_version: v1
+  mode: decision_point
+  trials_per_instance: 3
+
+models:
+  - id: model_gpt4o_mini
+    provider_model: openai/gpt-4o-mini
+    provider: openai_compat
+
+generation:
+  temperature: 0
+  max_output_tokens: 4096
+
+execution:
+  concurrency: 4
+  timeout_seconds: 120
+  retry_attempts: 3
+  retry_backoff_base: 2.0
+
+grading:
+  strategy: hybrid
+  pass_threshold: 4.0
+  judge: mock
+  judge_version: v1
