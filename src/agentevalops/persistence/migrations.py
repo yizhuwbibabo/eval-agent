@@ -21,8 +21,25 @@ def migration_001(engine: Engine) -> None:
     Base.metadata.create_all(engine)
 
 
+def migration_002(engine: Engine) -> None:
+    """Make ``grading_results.trial_id`` the primary key.
+
+    The table previously used a surrogate autoincrement ``grading_id`` primary
+    key, which caused re-scoring to append duplicate rows instead of
+    overwriting. The table is a derived cache (re-scorable), so it is dropped
+    and recreated with the corrected schema.
+    """
+    from agentevalops.persistence import models  # noqa: F401
+    from agentevalops.persistence.db import Base
+
+    with engine.begin() as conn:
+        conn.execute(text("DROP TABLE IF EXISTS grading_results"))
+    Base.metadata.create_all(engine)
+
+
 MIGRATIONS: list[tuple[int, str, Migration]] = [
     (1, "baseline", migration_001),
+    (2, "grading_results_trial_id_pk", migration_002),
 ]
 
 

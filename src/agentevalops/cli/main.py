@@ -39,6 +39,16 @@ def cli(log_level: str | None) -> None:
     setup_logging(log_level or settings.log_level, settings.log_json)
 
 
+@cli.command()
+@click.option("--host", default="0.0.0.0", help="Bind host.")
+@click.option("--port", default=8000, type=int, help="Bind port.")
+def serve(host: str, port: int) -> None:
+    """Run the HTTP service (FastAPI + uvicorn)."""
+    import uvicorn
+
+    uvicorn.run("agentevalops.server.app:app", host=host, port=port, log_level="info")
+
+
 # --------------------------------------------------------------------------- #
 # Ingest & validate
 # --------------------------------------------------------------------------- #

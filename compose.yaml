@@ -23,11 +23,12 @@ services:
     environment:
       AGENTEVALOPS_DATABASE_URL: postgresql+psycopg://agentevalops:agentevalops@postgres:5432/agentevalops
       AGENTEVALOPS_ARTIFACT_ROOT: /app/reports
+    ports:
+      - "8000:8000"
     volumes:
       - ./reports:/app/reports
       - ./datasets:/app/datasets
-    # Default command prints help; override to run a pipeline command.
-    command: ["--help"]
+    command: ["uvicorn", "agentevalops.server.app:app", "--host", "0.0.0.0", "--port", "8000"]
 
 volumes:
   pgdata:
