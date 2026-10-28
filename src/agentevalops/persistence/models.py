@@ -112,3 +112,16 @@ class FeedbackRecordRow(Base):
     has_verified_correct_response: Mapped[bool] = mapped_column(Boolean, default=False)
     has_verified_preference_pair: Mapped[bool] = mapped_column(Boolean, default=False)
     metadata_: Mapped[dict[str, Any]] = mapped_column("metadata", JSON, default=dict)
+
+
+class JobRow(Base):
+    __tablename__ = "jobs"
+
+    job_id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    run_id: Mapped[str] = mapped_column(String(128), index=True)
+    status: Mapped[str] = mapped_column(String(32))
+    error: Mapped[str | None] = mapped_column(Text, nullable=True)
+    result: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
+    created_at: Mapped[float] = mapped_column(Float, default=0.0)
+    started_at: Mapped[float | None] = mapped_column(Float, nullable=True)
+    finished_at: Mapped[float | None] = mapped_column(Float, nullable=True)

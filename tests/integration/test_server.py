@@ -46,3 +46,17 @@ def test_health_and_behaviors_endpoints() -> None:
     assert client.get("/health").json() == {"status": "ok"}
     body = client.get("/behaviors").json()
     assert "tool_failure_recovery" in body["behaviors"]
+
+
+def test_auth_required_when_key_set(monkeypatch) -> None:
+    from agentevalops.config.settings import get_settings
+
+    get_settings.cache_clear()
+    monkeypatch.setenv("AGENTEVALOPS_API_KEY", "secret")
+    try:
+        client = TestClient(create_app())
+        assert client.get("/health").status_code == 200  # health stays open
+        assert client.get("/behaviors").status_code == 401
+        assert client.get("/behaviors", headers={"X-API-Key": "secret"}).status_code == 200
+    finally:
+        get_settings.cache_clear()

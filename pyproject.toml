@@ -36,6 +36,7 @@ llm = ["openai>=1.0"]
 dev = [
     "pytest>=8",
     "pytest-asyncio>=0.23",
+    "pytest-cov>=4",
     "ruff>=0.4",
     "mypy>=1.8",
 ]
@@ -55,6 +56,17 @@ testpaths = ["tests"]
 addopts = "-ra"
 filterwarnings = [
     "ignore::DeprecationWarning:inspect_ai.*",
+]
+
+[tool.coverage.run]
+source = ["agentevalops"]
+
+[tool.coverage.report]
+fail_under = 78
+exclude_lines = [
+    "if TYPE_CHECKING:",
+    "raise NotImplementedError",
+    "pragma: no cover",
 ]
 
 [tool.ruff]

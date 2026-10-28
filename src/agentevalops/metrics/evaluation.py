@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from agentevalops.metrics.bootstrap import bootstrap_ci
 from agentevalops.schemas.evaluation import TrialResult, TrialStatus
 from agentevalops.schemas.grading import GradingResult
 
@@ -22,6 +23,19 @@ def _pass_rate(gradings: list[GradingResult]) -> float | None:
     if not definite:
         return None
     return sum(1 for g in definite if g.hybrid and g.hybrid.passed) / len(definite)
+
+
+def _pass_rate_ci(gradings: list[GradingResult]) -> dict[str, Any]:
+    """Pass rate with a bootstrap 95% confidence interval (trial-level)."""
+    definite = _definite(gradings)
+    values = [1.0 if (g.hybrid and g.hybrid.passed) else 0.0 for g in definite]
+    ci = bootstrap_ci(values) if values else {"mean": None, "ci_low": None, "ci_high": None, "n": 0}
+    return {
+        "pass_rate": ci["mean"],
+        "ci_low": ci["ci_low"],
+        "ci_high": ci["ci_high"],
+        "n": ci["n"],
+    }
 
 
 def evaluation_metrics(
@@ -42,6 +56,7 @@ def evaluation_metrics(
         gs = [grading_by_trial[t.trial_id] for t in completed if t.model_id == model and t.trial_id in grading_by_trial]
         by_model[model] = {
             "pass_rate": _pass_rate(gs),
+            "pass_rate_ci": _pass_rate_ci(gs),
             "definite_trials": len(_definite(gs)),
             "completed": len([t for t in completed if t.model_id == model]),
             "failed": len([t for t in failed if t.model_id == model]),
@@ -84,6 +99,7 @@ def evaluation_metrics(
         "failed_infra": len(failed),
         "unsupported": len(unsupported),
         "micro_pass_rate": micro_pass_rate,
+        "micro_pass_rate_ci": _pass_rate_ci(all_gs),
         "macro_pass_rate": macro_pass_rate,
         "failure_rate_by_behavior": {b: by_behavior[b]["failure_rate"] for b in by_behavior},
         "behavior_pass_rate": {b: by_behavior[b]["pass_rate"] for b in by_behavior},

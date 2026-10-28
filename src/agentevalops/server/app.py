@@ -15,12 +15,17 @@ Endpoints:
 
 from __future__ import annotations
 
-from fastapi import FastAPI, HTTPException
+import time
+from collections import defaultdict
+
+from fastapi import FastAPI, HTTPException, Request
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
 from agentevalops.config.settings import EvalConfig, get_settings
 from agentevalops.pipeline import Pipeline
-from agentevalops.server.jobs import Job, JobManager, JobStatus
+from agentevalops.schemas.jobs import Job, JobStatus
+from agentevalops.server.jobs import JobManager
 
 
 def _build_pipeline() -> Pipeline:
@@ -39,10 +44,35 @@ class RunRequest(BaseModel):
     config: EvalConfig
 
 
+# In-memory fixed-window rate limiter. A single-process service; a real
+# deployment would use a shared store (Redis) so limits apply across replicas.
+_requests: dict[str, list[float]] = defaultdict(list)
+_RATE_WINDOW = 60.0
+_RATE_LIMIT = 120
+
+
+async def _auth_and_rate_limit(request: Request, call_next):
+    settings = get_settings()
+    is_health = request.url.path == "/health"
+    if settings.api_key and not is_health:
+        if request.headers.get("X-API-Key") != settings.api_key:
+            return JSONResponse(status_code=401, content={"detail": "invalid or missing API key"})
+    if not is_health and request.client is not None:
+        now = time.time()
+        client = request.client.host
+        bucket = [t for t in _requests[client] if now - t < _RATE_WINDOW]
+        if len(bucket) >= _RATE_LIMIT:
+            return JSONResponse(status_code=429, content={"detail": "rate limit exceeded"})
+        bucket.append(now)
+        _requests[client] = bucket
+    return await call_next(request)
+
+
 def create_app() -> FastAPI:
     app = FastAPI(title="AgentEvalOps", version="0.1.0")
+    app.middleware("http")(_auth_and_rate_limit)
     pipeline = _build_pipeline()
-    manager = JobManager()
+    manager = JobManager(store=pipeline.store)
 
     @app.get("/health")
     def health() -> dict[str, str]:

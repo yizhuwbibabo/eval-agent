@@ -9,12 +9,14 @@ from agentevalops.ingestion.base import ImportResult, TraceImporter
 from agentevalops.ingestion.inspect_importer import InspectLogImporter
 from agentevalops.ingestion.jsonl import JsonlTraceImporter
 from agentevalops.ingestion.openai_chat import OpenAIChatImporter
+from agentevalops.ingestion.taubench import TauBenchImporter
 
 _IMPORTERS: dict[str, TraceImporter] = {
     JsonlTraceImporter.name: JsonlTraceImporter(),
     InspectLogImporter.name: InspectLogImporter(),
     AgentTrekImporter.name: AgentTrekImporter(),
     OpenAIChatImporter.name: OpenAIChatImporter(),
+    TauBenchImporter.name: TauBenchImporter(),
 }
 
 
@@ -30,6 +32,8 @@ def detect_importer(path: str | Path) -> str:
         return "inspect"
     if "agenttrek" in name:
         return "agenttrek"
+    if "tau" in name and "bench" in name:
+        return "taubench"
     return "jsonl"
 
 

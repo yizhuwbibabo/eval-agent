@@ -12,6 +12,7 @@ from agentevalops.persistence.models import (
     FeedbackRecordRow,
     GradingResultRow,
     HumanReviewRow,
+    JobRow,
 )
 from agentevalops.schemas.diagnosis import FailureDiagnosis
 from agentevalops.schemas.evaluation import EvalRun, TrialResult
@@ -277,6 +278,63 @@ class Store:
                 notes=row.notes,
                 reviewed_at=row.reviewed_at,
                 version=row.version,
+            )
+            for row in rows
+        ]
+
+    # -- background jobs ----------------------------------------------------- #
+    def save_job(self, job) -> None:
+        from agentevalops.schemas.jobs import Job
+
+        assert isinstance(job, Job)
+        with self.db.session() as s:
+            s.merge(
+                JobRow(
+                    job_id=job.job_id,
+                    run_id=job.run_id,
+                    status=job.status.value,
+                    error=job.error,
+                    result=job.result,
+                    created_at=job.created_at,
+                    started_at=job.started_at,
+                    finished_at=job.finished_at,
+                )
+            )
+            s.commit()
+
+    def get_job(self, job_id: str):
+        from agentevalops.schemas.jobs import Job, JobStatus
+
+        with self.db.session() as s:
+            row = s.get(JobRow, job_id)
+        if row is None:
+            return None
+        return Job(
+            job_id=row.job_id,
+            run_id=row.run_id,
+            status=JobStatus(row.status),
+            error=row.error,
+            result=row.result,
+            created_at=row.created_at,
+            started_at=row.started_at,
+            finished_at=row.finished_at,
+        )
+
+    def list_jobs(self) -> list:
+        from agentevalops.schemas.jobs import Job, JobStatus
+
+        with self.db.session() as s:
+            rows = s.scalars(select(JobRow).order_by(JobRow.created_at)).all()
+        return [
+            Job(
+                job_id=row.job_id,
+                run_id=row.run_id,
+                status=JobStatus(row.status),
+                error=row.error,
+                result=row.result,
+                created_at=row.created_at,
+                started_at=row.started_at,
+                finished_at=row.finished_at,
             )
             for row in rows
         ]

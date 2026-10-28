@@ -66,6 +66,8 @@ class OpenAICompatBackend(TextCompletionBackend):
             ],
             "temperature": 0.0,
             "max_tokens": self.max_tokens,
+            # Constrain the output to JSON where the provider supports it.
+            "response_format": {"type": "json_object"},
         }
         for key, value in self.extra_body.items():
             payload.setdefault(key, value)

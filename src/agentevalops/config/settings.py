@@ -47,6 +47,9 @@ class Settings(BaseSettings):
     allow_external_raw_traces: bool = False
     # Optional append-only audit log path for external model calls.
     audit_log_path: str | None = None
+    # Optional API key for the HTTP service. When set, requests must send
+    # `X-API-Key`. Defaults to unset (open) for local development.
+    api_key: str | None = None
 
     def ensure_dirs(self) -> None:
         Path(self.artifact_root).mkdir(parents=True, exist_ok=True)

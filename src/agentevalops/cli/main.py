@@ -296,5 +296,40 @@ def calibrate(run_id: str) -> None:
         click.echo("No labeled trials found; submit reviews with --label true/false.")
 
 
+@cli.command("sample-labels")
+@click.option("--run-id", required=True, help="Run whose trials to sample.")
+@click.option("--output", required=True, help="Path for the labeling JSONL.")
+@click.option("--n", default=100, type=int, help="Number of trials to sample.")
+@click.option("--seed", default=42, type=int, help="Random seed for reproducibility.")
+def sample_labels(run_id: str, output: str, n: int, seed: int) -> None:
+    """Emit a stratified labeling batch (passes + failures) for human review."""
+    from agentevalops.feedback.labeling import build_label_rows, write_label_rows
+
+    pipeline = _pipeline()
+    store = pipeline.store
+    assert store is not None
+    run = store.get_run(run_id)
+    if run is None:
+        raise click.ClickException(f"unknown run {run_id!r}")
+    gradings = store.get_gradings(run_id)
+    trials = {t.trial_id: t for t in store.get_trials(run_id)}
+    instances = pipeline._load_instances(run.benchmark_id, run.dataset_version)
+    rows = build_label_rows(gradings, trials, instances, n, seed)
+    write_label_rows(rows, output)
+    click.echo(f"wrote {len(rows)} rows to {output}; fill the 'label' field with true/false.")
+
+
+@cli.command("ingest-labels")
+@click.option("--run-id", required=True, help="Run to attach labels to.")
+@click.option("--input", "input_path", required=True, help="Filled labeling JSONL.")
+def ingest_labels_cmd(run_id: str, input_path: str) -> None:
+    """Ingest filled human labels back into the store."""
+    from agentevalops.feedback.labeling import ingest_labels
+
+    store = get_store(get_settings().database_url)
+    n = ingest_labels(store, run_id, input_path)
+    click.echo(f"ingested {n} labels")
+
+
 if __name__ == "__main__":
     cli()

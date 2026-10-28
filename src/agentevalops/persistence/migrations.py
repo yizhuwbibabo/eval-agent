@@ -49,10 +49,19 @@ def migration_003(engine: Engine) -> None:
         pass
 
 
+def migration_004(engine: Engine) -> None:
+    """Create the background-jobs table (added in the service layer)."""
+    from agentevalops.persistence import models  # noqa: F401
+    from agentevalops.persistence.db import Base
+
+    Base.metadata.create_all(engine)
+
+
 MIGRATIONS: list[tuple[int, str, Migration]] = [
     (1, "baseline", migration_001),
     (2, "grading_results_trial_id_pk", migration_002),
     (3, "human_reviews_label", migration_003),
+    (4, "background_jobs", migration_004),
 ]
 
 
