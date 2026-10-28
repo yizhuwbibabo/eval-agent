@@ -1,0 +1,40 @@
+# DeepSeek (official) real-model config for the real recovery benchmark.
+#
+# Requires:
+#   export OPENAI_API_KEY=sk-...                     # DeepSeek key
+#   export OPENAI_BASE_URL=https://api.deepseek.com  # official DeepSeek endpoint
+#   export AGENTEVALOPS_ALLOW_EXTERNAL_RAW_TRACES=true  # opt in to external sends
+#
+# The dataset is the public GurkanOz/tool-failure-recovery-trajectories set;
+# email-domain (PII-shaped) records are already quarantined by the quality gate.
+#
+# Do NOT commit real keys.
+evaluation:
+  dataset: recovery_v3
+  dataset_version: v1
+  mode: decision_point
+  trials_per_instance: 1
+
+models:
+  - id: model_deepseek_flash
+    provider_model: openai/deepseek-flash
+    provider: openai_compat
+    config:
+      thinking:
+        type: disabled
+
+generation:
+  temperature: 0
+  max_output_tokens: 4096
+
+execution:
+  concurrency: 8
+  timeout_seconds: 120
+  retry_attempts: 3
+  retry_backoff_base: 2.0
+
+grading:
+  strategy: hybrid
+  pass_threshold: 4.0
+  judge: mock
+  judge_version: v1

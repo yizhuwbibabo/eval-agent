@@ -78,8 +78,17 @@ python scripts/run_real_data.py --data data/real/recovery_v3.jsonl
 
 # real model: requires OPENAI_API_KEY (and optionally OPENAI_BASE_URL)
 export OPENAI_API_KEY=sk-...
+export AGENTEVALOPS_ALLOW_EXTERNAL_RAW_TRACES=true   # opt in to external sends
 python scripts/run_real_data.py --config configs/production_recovery.yaml
+
+# e.g. DeepSeek official endpoint (deepseek-flash)
+export OPENAI_BASE_URL=https://api.deepseek.com
+python scripts/run_real_data.py --config configs/deepseek_recovery.yaml
 ```
+
+The `openai_compat` provider is fail-closed: it refuses to send traces to an
+external model unless `AGENTEVALOPS_ALLOW_EXTERNAL_RAW_TRACES=true` is set
+explicitly.
 
 The importer (`src/agentevalops/ingestion/openai_chat.py`) normalizes
 OpenAI tool-calling trajectories into the unified Trace schema and detects the
@@ -169,6 +178,7 @@ Three profiles under `configs/`:
 - `test.yaml` — fast offline (2 mock models, `trials_per_instance: 1`)
 - `production.yaml` — real OpenAI-compatible provider on the synthetic benchmark (requires `OPENAI_API_KEY`)
 - `production_recovery.yaml` — real OpenAI-compatible provider on the real recovery benchmark (requires `OPENAI_API_KEY`)
+- `deepseek_recovery.yaml` — DeepSeek official endpoint (`deepseek-flash`, thinking mode disabled) on the real recovery benchmark
 
 Sensitive settings come from environment variables; copy `.env.example` to
 `.env`. The privacy gate `AGENTEVALOPS_ALLOW_EXTERNAL_RAW_TRACES` defaults to

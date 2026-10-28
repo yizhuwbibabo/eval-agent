@@ -13,7 +13,7 @@ from typing import Any
 
 import httpx
 
-from agentevalops.config.settings import GenerationConfig, ModelSpec
+from agentevalops.config.settings import GenerationConfig, ModelSpec, get_settings
 from agentevalops.errors import ProviderError, ProviderUnavailableError
 from agentevalops.evaluation.prompting import EvalPrompt
 from agentevalops.evaluation.providers.base import ModelProvider
@@ -41,6 +41,12 @@ class OpenAICompatProvider(ModelProvider):
                 "OPENAI_API_KEY is not set; cannot call a real model",
                 code="PROVIDER_UNAVAILABLE",
             )
+        if not get_settings().allow_external_raw_traces:
+            raise ProviderError(
+                "sending traces to an external model is disabled by default; "
+                "set AGENTEVALOPS_ALLOW_EXTERNAL_RAW_TRACES=true to opt in",
+                code="EXTERNAL_TRACES_DISABLED",
+            )
         messages = self._render_messages(prompt)
         tools = [
             {
@@ -59,6 +65,10 @@ class OpenAICompatProvider(ModelProvider):
             "temperature": generation.temperature,
             "max_tokens": generation.max_output_tokens,
         }
+        # Provider-specific extras (e.g. DeepSeek thinking mode) come from the
+        # model spec config; reserved keys are never overridden by config.
+        for key, value in (model_spec.config or {}).items():
+            payload.setdefault(key, value)
         if tools:
             payload["tools"] = tools
             payload["tool_choice"] = "auto"
@@ -112,7 +122,13 @@ class OpenAICompatProvider(ModelProvider):
                     {
                         "role": "tool",
                         "tool_call_id": m.tool_call_id,
-                        "content": json.dumps(m.tool_result) if m.tool_result is not None else (m.error or ""),
+                        "content": (
+                            m.tool_result
+                            if isinstance(m.tool_result, str)
+                            else json.dumps(m.tool_result)
+                            if m.tool_result is not None
+                            else (m.error or "")
+                        ),
                     }
                 )
             elif m.role == "assistant" and m.tool_arguments is not None and m.tool_call_id:

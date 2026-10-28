@@ -28,8 +28,7 @@ logs/
 datasets/synthetic/*.jsonl
 datasets/synthetic/*__*/
 .agentevalops/
-.real_benchmarks/
-.real_reports/
+.real_*/
 data/real/*.jsonl
 
 # OS / editor
