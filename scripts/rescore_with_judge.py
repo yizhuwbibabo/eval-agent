@@ -1,9 +1,9 @@
 """Re-score an existing run with a (possibly different) judge.
 
 Grading is decoupled from model execution, so saved responses can be re-scored
-without re-running the models. This script loads a finished run's trials from
-the store, re-scores them with the judge in the given config, and regenerates
-the analysis + report bundle.
+without re-running the models. The script skips trials already graded by a
+model-based judge (``llm_rubric_judge``) so it can be run repeatedly to make
+incremental progress on a large run within a bounded wall-clock.
 
 Usage:
     JUDGE_API_KEY=... AGENTEVALOPS_ALLOW_EXTERNAL_RAW_TRACES=true \
@@ -11,7 +11,8 @@ Usage:
         --run-id real_recovery_v3_run \
         --config configs/deepseek_recovery.yaml \
         --database-url sqlite:////tmp/deepseek.db \
-        --benchmark-root .real_ds
+        --benchmark-root .real_ds \
+        --limit 60
 """
 
 from __future__ import annotations
@@ -23,6 +24,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 from agentevalops.config.settings import get_settings, load_eval_config  # noqa: E402
+from agentevalops.grading.rescore import score_trial  # noqa: E402
 from agentevalops.logging_setup import setup_logging  # noqa: E402
 from agentevalops.pipeline import Pipeline  # noqa: E402
 
@@ -40,6 +42,7 @@ def main() -> None:
     if not config_path:
         raise SystemExit("--config is required")
     cfg = load_eval_config(config_path)
+    limit = int(_arg("--limit") or "0")
 
     pipeline = Pipeline(
         behaviors_dir="configs/behaviors",
@@ -47,14 +50,49 @@ def main() -> None:
         artifact_root=settings.artifact_root,
         database_url=_arg("--database-url") or settings.database_url,
     )
+    assert pipeline.store is not None
+    run = pipeline.store.get_run(run_id)
+    if run is None:
+        raise KeyError(f"unknown run {run_id!r}")
+    trials = pipeline.store.get_trials(run_id)
+    instances = pipeline._load_instances(run.benchmark_id, run.dataset_version)
+    judge = pipeline._judge(cfg)
 
-    gradings = asyncio.run(pipeline.score(run_id, cfg))
-    print(f"[score] re-scored {len(gradings)} trials with judge={cfg.grading.judge} ({cfg.grading.judge_model or 'mock'})")
-    diagnoses = pipeline.analyze(run_id)
-    print(f"[analyze] diagnoses={len(diagnoses)}")
-    paths = pipeline.report(run_id)
-    for kind, path in paths.items():
-        print(f"  {kind}: {path}")
+    already = {
+        g.trial_id
+        for g in pipeline.store.get_gradings(run_id)
+        if g.rubric_verdict is not None and g.rubric_verdict.grader_id == "llm_rubric_judge"
+    }
+    todo = [t for t in trials if t.trial_id not in already]
+    if limit:
+        todo = todo[:limit]
+    print(f"[rescore] {len(already)} already judged; {len(todo)} to score now", flush=True)
+
+    sem = asyncio.Semaphore(max(1, cfg.grading.concurrency))
+
+    async def one(trial):
+        instance = instances.get(trial.instance_id)
+        if instance is None:
+            return None
+        behavior = pipeline.registry.get(instance.behavior_id)
+        async with sem:
+            g = await score_trial(
+                instance,
+                trial,
+                behavior.rubric,
+                judge,
+                cfg.grading.strategy,
+                cfg.grading.pass_threshold,
+                cfg.grading.judge_version,
+            )
+        pipeline.store.save_grading(g)
+        return g
+
+    async def run_all():
+        return await asyncio.gather(*(one(t) for t in todo))
+
+    done = [g for g in asyncio.run(run_all()) if g is not None]
+    print(f"[rescore] scored {len(done)} trials with judge={cfg.grading.judge} ({cfg.grading.judge_model})", flush=True)
 
 
 if __name__ == "__main__":

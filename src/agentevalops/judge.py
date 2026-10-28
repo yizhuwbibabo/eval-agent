@@ -55,6 +55,7 @@ class OpenAICompatBackend(TextCompletionBackend):
         self.extra_body = extra_body or {}
         self.max_retries = max_retries
         self.retry_backoff = retry_backoff
+        self.max_tokens = int(self.extra_body.pop("max_tokens", 512))
 
     async def complete(self, system: str, user: str) -> str:
         payload: dict[str, Any] = {
@@ -64,6 +65,7 @@ class OpenAICompatBackend(TextCompletionBackend):
                 {"role": "user", "content": user},
             ],
             "temperature": 0.0,
+            "max_tokens": self.max_tokens,
         }
         for key, value in self.extra_body.items():
             payload.setdefault(key, value)

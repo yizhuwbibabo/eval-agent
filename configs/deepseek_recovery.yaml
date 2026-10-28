@@ -44,4 +44,8 @@ grading:
   judge_version: v1
   judge_model: glm-5
   judge_base_url: https://open.bigmodel.cn/api/paas/v4
-  concurrency: 1
+  concurrency: 2
+  judge_config:
+    thinking:
+      type: disabled
+    max_tokens: 1024
