@@ -27,6 +27,7 @@ from agentevalops.config.settings import get_settings, load_eval_config  # noqa:
 from agentevalops.grading.rescore import score_trial  # noqa: E402
 from agentevalops.logging_setup import setup_logging  # noqa: E402
 from agentevalops.pipeline import Pipeline  # noqa: E402
+from agentevalops.schemas.grading import GradeStatus  # noqa: E402
 
 
 def _arg(flag: str, default: str | None = None) -> str | None:
@@ -61,7 +62,9 @@ def main() -> None:
     already = {
         g.trial_id
         for g in pipeline.store.get_gradings(run_id)
-        if g.rubric_verdict is not None and g.rubric_verdict.grader_id == "llm_rubric_judge"
+        if g.rubric_verdict is not None
+        and g.rubric_verdict.grader_id == "llm_rubric_judge"
+        and g.rubric_verdict.status != GradeStatus.ERROR
     }
     todo = [t for t in trials if t.trial_id not in already]
     if limit:

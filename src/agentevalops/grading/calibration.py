@@ -6,6 +6,7 @@ Only computed when human labels exist; never fabricates grader accuracy.
 from __future__ import annotations
 
 from collections.abc import Sequence
+from typing import Any
 
 from pydantic import BaseModel, Field
 
@@ -57,3 +58,23 @@ def calibrate(auto_passed: Sequence[bool], human_passed: Sequence[bool]) -> Cali
         confusion={"tp": tp, "fp": fp, "fn": fn, "tn": tn},
         n=n,
     )
+
+
+def calibrate_gradings(
+    gradings: Sequence[Any], labels: dict[str, bool]
+) -> CalibrationResult:
+    """Compare grader pass/fail against human labels keyed by ``trial_id``.
+
+    ``gradings`` are :class:`GradingResult` objects; only trials that have a
+    hybrid verdict and a human label are compared. Never fabricates labels.
+    """
+    auto: list[bool] = []
+    human: list[bool] = []
+    for g in gradings:
+        if g.hybrid is None or g.hybrid.passed is None:
+            continue
+        if g.trial_id not in labels:
+            continue
+        auto.append(bool(g.hybrid.passed))
+        human.append(bool(labels[g.trial_id]))
+    return calibrate(auto, human)

@@ -201,6 +201,29 @@ Sensitive settings come from environment variables; copy `.env.example` to
 
 ---
 
+## HTTP service
+
+Run the evaluation pipeline as a service:
+
+```bash
+agenteval serve --host 0.0.0.0 --port 8000
+# or: uvicorn agentevalops.server.app:app --host 0.0.0.0 --port 8000
+```
+
+Endpoints: `GET /health`, `GET /behaviors`, `POST /runs` (start a background
+pipeline job), `GET /runs`, `GET /runs/{job_id}`, `GET /runs/{job_id}/report`.
+`docker compose up` starts Postgres + the service.
+
+Grader calibration (agreement / Cohen's kappa / precision / recall) is computed
+from human labels; reviewers submit labels with `agenteval review --label
+true|false` and the report is `agenteval calibrate --run-id <id>`. Calibration
+is only emitted when labels exist — accuracy is never fabricated.
+
+External model calls (model-under-test and judge) are recorded to an
+append-only audit log when `AGENTEVALOPS_AUDIT_LOG` is set.
+
+---
+
 ## Security
 
 Traces are untrusted input. The system never executes commands or code found in

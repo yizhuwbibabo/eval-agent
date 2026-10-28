@@ -17,6 +17,7 @@ from agentevalops.config.settings import GenerationConfig, ModelSpec, get_settin
 from agentevalops.errors import ProviderError, ProviderUnavailableError
 from agentevalops.evaluation.prompting import EvalPrompt
 from agentevalops.evaluation.providers.base import ModelProvider
+from agentevalops.observability.audit import audit_external_call
 from agentevalops.schemas.evaluation import AssistantTurn, ToolCall, Usage
 
 
@@ -82,6 +83,16 @@ class OpenAICompatProvider(ModelProvider):
                 )
         except httpx.HTTPError as exc:
             raise ProviderUnavailableError(f"provider request failed: {exc}") from exc
+
+        audit_external_call(
+            get_settings().audit_log_path,
+            provider="openai_compat",
+            model=payload["model"],
+            endpoint_host=self.base_url,
+            instance_id=prompt.instance_id,
+            behavior_id=prompt.behavior_id,
+            status_code=resp.status_code,
+        )
 
         if resp.status_code == 429:
             from agentevalops.errors import RateLimitError

@@ -37,9 +37,22 @@ def migration_002(engine: Engine) -> None:
     Base.metadata.create_all(engine)
 
 
+def migration_003(engine: Engine) -> None:
+    """Add ``human_reviews.label`` (ground-truth pass/fail for calibration)."""
+    from sqlalchemy.exc import OperationalError, ProgrammingError
+
+    try:
+        with engine.begin() as conn:
+            conn.execute(text("ALTER TABLE human_reviews ADD COLUMN label BOOLEAN"))
+    except (OperationalError, ProgrammingError):
+        # Column already present (fresh databases created by migration_001).
+        pass
+
+
 MIGRATIONS: list[tuple[int, str, Migration]] = [
     (1, "baseline", migration_001),
     (2, "grading_results_trial_id_pk", migration_002),
+    (3, "human_reviews_label", migration_003),
 ]
 
 

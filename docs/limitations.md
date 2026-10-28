@@ -54,6 +54,14 @@ from current data, so the system's claims stay honest.
 - **`tool_failure_recovery` is scoped to `openai_chat` traces** via its
   `context_filter`, so it is not exercised by the synthetic `mock_agent`
   dataset (which covers the other four behaviors).
+- **τ-bench / SWE-agent importers** are not dedicated yet. τ-bench and other
+  OpenAI-tool-calling exports can often be ingested by `OpenAIChatImporter`
+  (which reads `{"messages": [...], "tools": [...]}`), but schema-specific
+  fields (reward, task metadata) are not yet normalized.
+- **Human calibration labels** require human review of *both* passes and
+  failures; the review CLI currently targets diagnosed (failed) cases, so
+  recall/precision should be read with that sampling in mind until pass-side
+  labels are added.
 
 ## Inspect adapter caveats
 

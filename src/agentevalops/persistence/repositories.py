@@ -250,6 +250,7 @@ class Store:
                     model_id=r.model_id,
                     reviewer=r.reviewer,
                     decision=r.decision.value,
+                    label=r.label,
                     aspects=r.aspects,
                     notes=r.notes,
                     reviewed_at=r.reviewed_at,
@@ -257,6 +258,28 @@ class Store:
                 )
             )
             s.commit()
+
+    def get_reviews(self, run_id: str) -> list[HumanReview]:
+        from agentevalops.schemas.feedback import ReviewDecision
+
+        with self.db.session() as s:
+            rows = s.scalars(select(HumanReviewRow).where(HumanReviewRow.run_id == run_id)).all()
+        return [
+            HumanReview(
+                review_id=row.review_id,
+                run_id=row.run_id,
+                instance_id=row.instance_id,
+                model_id=row.model_id,
+                reviewer=row.reviewer,
+                decision=ReviewDecision(row.decision),
+                label=row.label,
+                aspects=row.aspects or [],
+                notes=row.notes,
+                reviewed_at=row.reviewed_at,
+                version=row.version,
+            )
+            for row in rows
+        ]
 
     def save_feedback(self, f: FeedbackRecord) -> None:
         with self.db.session() as s:

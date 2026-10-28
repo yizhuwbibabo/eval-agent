@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 from datetime import datetime, timezone
 from pathlib import Path
@@ -19,6 +20,8 @@ class DatasetManifest(BaseModel):
     behavior_ids: list[str] = Field(default_factory=list)
     created_at: datetime | None = None
     source_type: str = "synthetic"
+    # SHA-256 of the instances.jsonl payload, for reproducibility/verification.
+    checksum: str | None = None
     metadata: dict[str, Any] = Field(default_factory=dict)
 
 
@@ -33,9 +36,9 @@ class DatasetManager:
         d = self.dataset_dir(dataset.benchmark_id, dataset.dataset_version)
         d.mkdir(parents=True, exist_ok=True)
         instances_path = d / "instances.jsonl"
+        payload = "\n".join(i.model_dump_json() for i in dataset.instances)
         with instances_path.open("w", encoding="utf-8") as f:
-            for inst in dataset.instances:
-                f.write(inst.model_dump_json() + "\n")
+            f.write(payload + ("\n" if payload else ""))
         manifest = DatasetManifest(
             benchmark_id=dataset.benchmark_id,
             dataset_version=dataset.dataset_version,
@@ -43,6 +46,7 @@ class DatasetManager:
             behavior_ids=sorted({i.behavior_id for i in dataset.instances}),
             created_at=datetime.now(timezone.utc),
             source_type=source_type,
+            checksum=hashlib.sha256(payload.encode("utf-8")).hexdigest(),
             metadata=dataset.metadata,
         )
         (d / "manifest.json").write_text(manifest.model_dump_json(indent=2), encoding="utf-8")

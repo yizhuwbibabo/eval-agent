@@ -253,9 +253,10 @@ def compare(baseline: str, candidate: str) -> None:
 @click.option("--instance-id", required=True)
 @click.option("--model-id", required=True)
 @click.option("--decision", required=True, type=click.Choice(["confirm", "reject", "flag"]))
+@click.option("--label", default=None, type=bool, help="Ground-truth pass/fail label for calibration.")
 @click.option("--reviewer", default="human")
 @click.option("--notes", default="")
-def review(run_id: str, instance_id: str, model_id: str, decision: str, reviewer: str, notes: str) -> None:
+def review(run_id: str, instance_id: str, model_id: str, decision: str, label: bool | None, reviewer: str, notes: str) -> None:
     """Submit a human review for a diagnosis."""
     store = get_store(get_settings().database_url)
     service = ReviewService(store)
@@ -266,10 +267,33 @@ def review(run_id: str, instance_id: str, model_id: str, decision: str, reviewer
         model_id=model_id,
         reviewer=reviewer,
         decision=ReviewDecision(decision),
+        label=label,
         notes=notes,
     )
     service.submit(review, store.get_diagnoses(run_id))
     click.echo(f"recorded review {review.review_id}")
+
+
+@cli.command()
+@click.option("--run-id", required=True, help="Run to calibrate against human labels.")
+def calibrate(run_id: str) -> None:
+    """Report grader agreement with human labels (kappa / precision / recall)."""
+    from agentevalops.grading.calibration import calibrate_gradings
+
+    store = get_store(get_settings().database_url)
+    gradings = store.get_gradings(run_id)
+    reviews = store.get_reviews(run_id)
+    labels: dict[str, bool] = {}
+    for r in reviews:
+        if r.label is None:
+            continue
+        for g in gradings:
+            if g.instance_id == r.instance_id and g.model_id == r.model_id:
+                labels[g.trial_id] = r.label
+    result = calibrate_gradings(gradings, labels)
+    click.echo(json.dumps(result.model_dump(), indent=2))
+    if result.n == 0:
+        click.echo("No labeled trials found; submit reviews with --label true/false.")
 
 
 if __name__ == "__main__":

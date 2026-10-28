@@ -45,6 +45,8 @@ class Settings(BaseSettings):
     # Privacy gate: sending unredacted traces to external LLMs is disabled by
     # default. This is deliberately separate from the redaction rules.
     allow_external_raw_traces: bool = False
+    # Optional append-only audit log path for external model calls.
+    audit_log_path: str | None = None
 
     def ensure_dirs(self) -> None:
         Path(self.artifact_root).mkdir(parents=True, exist_ok=True)

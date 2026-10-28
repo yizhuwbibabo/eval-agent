@@ -3,8 +3,9 @@
 from __future__ import annotations
 
 from agentevalops.diagnostics.taxonomy import TAXONOMY, humanize, is_model_behavior
-from agentevalops.grading.calibration import calibrate
+from agentevalops.grading.calibration import calibrate, calibrate_gradings
 from agentevalops.schemas.diagnosis import FailureCategory
+from agentevalops.schemas.grading import GradingResult, HybridVerdict
 
 
 def test_taxonomy_covers_all_categories() -> None:
@@ -38,4 +39,22 @@ def test_calibrate_imperfect() -> None:
 def test_calibrate_empty() -> None:
     r = calibrate([], [])
     assert r.agreement_rate is None
-    assert r.n == 0
+
+
+def test_calibrate_gradings_uses_only_labeled_trials() -> None:
+    def g(trial_id: str, passed: bool) -> GradingResult:
+        return GradingResult(
+            trial_id=trial_id,
+            run_id="r",
+            instance_id="i",
+            model_id="m",
+            behavior_id="b",
+            hybrid=HybridVerdict(passed=passed, strategy="hybrid"),
+        )
+
+    gradings = [g("t1", True), g("t2", False), g("t3", True)]
+    labels = {"t1": True, "t2": True}  # t3 unlabeled -> excluded
+    r = calibrate_gradings(gradings, labels)
+    assert r.n == 2
+    # auto [True, False] vs human [True, True]: one agreement (t1), one fp (t2 judged fail but human pass)
+    assert r.confusion == {"tp": 1, "fp": 0, "fn": 1, "tn": 0}

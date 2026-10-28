@@ -91,6 +91,7 @@ class HumanReviewRow(Base):
     model_id: Mapped[str] = mapped_column(String(128))
     reviewer: Mapped[str] = mapped_column(String(128))
     decision: Mapped[str] = mapped_column(String(32))
+    label: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
     aspects: Mapped[list[str]] = mapped_column(JSON, default=list)
     notes: Mapped[str] = mapped_column(Text, default="")
     reviewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

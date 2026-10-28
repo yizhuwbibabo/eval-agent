@@ -22,6 +22,10 @@ class HumanReview(BaseModel):
     model_id: str
     reviewer: str
     decision: ReviewDecision
+    # Ground-truth behavior label for grader calibration: True = the model
+    # response passed (correct behavior), False = it failed. Optional because
+    # not every review provides a pass/fail label.
+    label: bool | None = None
     # Which aspect the reviewer judged.
     aspects: list[str] = Field(
         default_factory=lambda: ["sample_validity", "behavior_occurrence", "grader_correct"]
