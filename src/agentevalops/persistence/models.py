@@ -51,8 +51,7 @@ class EvalTrialRow(Base):
 class GradingResultRow(Base):
     __tablename__ = "grading_results"
 
-    grading_id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    trial_id: Mapped[str] = mapped_column(String(256), index=True)
+    trial_id: Mapped[str] = mapped_column(String(256), primary_key=True)
     run_id: Mapped[str] = mapped_column(String(128), index=True)
     instance_id: Mapped[str] = mapped_column(String(256), index=True)
     model_id: Mapped[str] = mapped_column(String(128), index=True)

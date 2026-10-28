@@ -56,6 +56,8 @@ def main() -> None:
 
     data_path = _arg("--data", "data/real/recovery_v3.jsonl")
     config_path = _arg("--config")
+    limit_arg = _arg("--limit")
+    limit = int(limit_arg) if limit_arg else None
     cfg = load_eval_config(config_path) if config_path else _mock_config()
     benchmark_id = cfg.evaluation.dataset
     dataset_version = cfg.evaluation.dataset_version
@@ -63,6 +65,8 @@ def main() -> None:
     # 1. Import real data into the unified Trace schema.
     imported = OpenAIChatImporter().import_file(data_path)
     traces = imported.traces
+    if limit is not None:
+        traces = traces[:limit]
     print(f"[import] traces={len(traces)} failed={len(imported.failed_records)} warnings={len(imported.warnings)}")
 
     # 2. Data quality gate.

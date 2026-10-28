@@ -1,8 +1,12 @@
 # DeepSeek (official) real-model config for the real recovery benchmark.
 #
+# Model under test: DeepSeek deepseek-flash (openai_compat, thinking off).
+# Judge: Zhipu GLM-5 (real LLM rubric judge).
+#
 # Requires:
-#   export OPENAI_API_KEY=sk-...                     # DeepSeek key
+#   export OPENAI_API_KEY=sk-...                     # DeepSeek key (model under test)
 #   export OPENAI_BASE_URL=https://api.deepseek.com  # official DeepSeek endpoint
+#   export JUDGE_API_KEY=...                          # Zhipu GLM key (judge)
 #   export AGENTEVALOPS_ALLOW_EXTERNAL_RAW_TRACES=true  # opt in to external sends
 #
 # The dataset is the public GurkanOz/tool-failure-recovery-trajectories set;
@@ -36,5 +40,8 @@ execution:
 grading:
   strategy: hybrid
   pass_threshold: 4.0
-  judge: mock
+  judge: llm
   judge_version: v1
+  judge_model: glm-5
+  judge_base_url: https://open.bigmodel.cn/api/paas/v4
+  concurrency: 1

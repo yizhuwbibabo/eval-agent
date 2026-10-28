@@ -86,9 +86,24 @@ export OPENAI_BASE_URL=https://api.deepseek.com
 python scripts/run_real_data.py --config configs/deepseek_recovery.yaml
 ```
 
-The `openai_compat` provider is fail-closed: it refuses to send traces to an
-external model unless `AGENTEVALOPS_ALLOW_EXTERNAL_RAW_TRACES=true` is set
-explicitly.
+To use a real LLM judge (e.g. Zhipu GLM-5) instead of the offline rubric judge,
+set `judge: llm` in the config and export `JUDGE_API_KEY`:
+
+```bash
+export JUDGE_API_KEY=...   # Zhipu GLM key (judge only, separate from the model key)
+```
+
+Grading is decoupled from model execution, so saved responses can be re-scored
+with a different judge without re-running the models:
+
+```bash
+python scripts/rescore_with_judge.py --run-id real_recovery_v3_run \
+  --config configs/deepseek_recovery.yaml --database-url sqlite:///...db
+```
+
+The `openai_compat` provider and the LLM judge are both fail-closed: they
+refuse to send trace content to an external model unless
+`AGENTEVALOPS_ALLOW_EXTERNAL_RAW_TRACES=true` is set explicitly.
 
 The importer (`src/agentevalops/ingestion/openai_chat.py`) normalizes
 OpenAI tool-calling trajectories into the unified Trace schema and detects the
@@ -178,7 +193,7 @@ Three profiles under `configs/`:
 - `test.yaml` — fast offline (2 mock models, `trials_per_instance: 1`)
 - `production.yaml` — real OpenAI-compatible provider on the synthetic benchmark (requires `OPENAI_API_KEY`)
 - `production_recovery.yaml` — real OpenAI-compatible provider on the real recovery benchmark (requires `OPENAI_API_KEY`)
-- `deepseek_recovery.yaml` — DeepSeek official endpoint (`deepseek-flash`, thinking mode disabled) on the real recovery benchmark
+- `deepseek_recovery.yaml` — DeepSeek official endpoint (`deepseek-flash`, thinking mode disabled) as model-under-test + Zhipu GLM-5 (`glm-5`) as the real LLM judge
 
 Sensitive settings come from environment variables; copy `.env.example` to
 `.env`. The privacy gate `AGENTEVALOPS_ALLOW_EXTERNAL_RAW_TRACES` defaults to

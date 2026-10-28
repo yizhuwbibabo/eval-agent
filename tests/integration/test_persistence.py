@@ -53,6 +53,19 @@ def test_grading_and_diagnosis_roundtrip(tmp_path) -> None:
     assert loaded_d[0].primary_category == FailureCategory.MODEL_BEHAVIOR_UNSAFE_ACTION
 
 
+def test_grading_rescore_overwrites_not_appends(tmp_path) -> None:
+    """Re-scoring the same trial (e.g. with a different judge) must replace
+    the previous grading rather than append a duplicate row."""
+    store = get_store(f"sqlite:///{tmp_path}/db.sqlite")
+    g1 = GradingResult(trial_id="t1", run_id="r1", instance_id="i1", model_id="m", behavior_id="b", grader_version="v1")
+    g2 = GradingResult(trial_id="t1", run_id="r1", instance_id="i1", model_id="m", behavior_id="b", grader_version="v2")
+    store.save_grading(g1)
+    store.save_grading(g2)
+    loaded = store.get_gradings("r1")
+    assert len(loaded) == 1
+    assert loaded[0].grader_version == "v2"
+
+
 def test_completed_trial_ids(tmp_path) -> None:
     from agentevalops.schemas.evaluation import TrialResult, TrialStatus
 

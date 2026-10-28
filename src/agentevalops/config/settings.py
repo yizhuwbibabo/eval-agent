@@ -92,6 +92,14 @@ class GradingConfig(BaseModel):
     pass_threshold: float = 4.0
     judge: str = "mock"  # mock | llm
     judge_version: str = "v1"
+    # LLM judge backend (used when judge == "llm"). The API key is read from
+    # JUDGE_API_KEY in the environment and never stored in the config.
+    judge_model: str | None = None
+    judge_base_url: str | None = None
+    judge_config: dict[str, Any] = Field(default_factory=dict)
+    # Concurrency for judge calls during scoring (kept low to respect
+    # rate limits; independent of model-under-test concurrency).
+    concurrency: int = 4
 
 
 class EvaluationConfig(BaseModel):

@@ -6,6 +6,7 @@ reporting together. The CLI and end-to-end tests both drive this module.
 
 from __future__ import annotations
 
+import asyncio
 from typing import Any
 
 from agentevalops.benchmark.builder import BenchmarkBuilder, BuildStats
@@ -87,37 +88,60 @@ class Pipeline:
     async def score(self, run_id: str, cfg: EvalConfig) -> list[GradingResult]:
         if self.store is None:
             raise RuntimeError("scoring requires a store (database_url)")
-        run = self.store.get_run(run_id)
+        store = self.store
+        run = store.get_run(run_id)
         if run is None:
             raise KeyError(f"unknown run {run_id!r}")
-        trials = self.store.get_trials(run_id)
+        trials = store.get_trials(run_id)
         instances = self._load_instances(run.benchmark_id, run.dataset_version)
         judge = self._judge(cfg)
-        gradings: list[GradingResult] = []
-        for trial in trials:
+        sem = asyncio.Semaphore(max(1, cfg.grading.concurrency))
+
+        async def score_one(trial) -> GradingResult | None:
             instance = instances.get(trial.instance_id)
             if instance is None:
-                continue
+                return None
             behavior = self.registry.get(instance.behavior_id)
-            g = await score_trial(
-                instance,
-                trial,
-                behavior.rubric,
-                judge,
-                cfg.grading.strategy,
-                cfg.grading.pass_threshold,
-                cfg.grading.judge_version,
-            )
-            gradings.append(g)
-            self.store.save_grading(g)
-        return gradings
+            async with sem:
+                g = await score_trial(
+                    instance,
+                    trial,
+                    behavior.rubric,
+                    judge,
+                    cfg.grading.strategy,
+                    cfg.grading.pass_threshold,
+                    cfg.grading.judge_version,
+                )
+            store.save_grading(g)
+            return g
+
+        results = await asyncio.gather(*(score_one(t) for t in trials))
+        return [g for g in results if g is not None]
 
     def _judge(self, cfg: EvalConfig) -> RubricJudge:
         if cfg.grading.judge == "llm":
-            raise NotImplementedError(
-                "LLM judge requires a configured TextCompletionBackend; "
-                "use judge='mock' for offline runs."
+            import os
+
+            from agentevalops.grading.llm_judge import LLMRubricJudge
+            from agentevalops.judge import OpenAICompatBackend
+
+            if not get_settings().allow_external_raw_traces:
+                raise RuntimeError(
+                    "judge='llm' sends trace context to an external model; "
+                    "set AGENTEVALOPS_ALLOW_EXTERNAL_RAW_TRACES=true to opt in"
+                )
+            api_key = os.environ.get("JUDGE_API_KEY")
+            if not api_key:
+                raise RuntimeError("judge='llm' requires JUDGE_API_KEY in the environment")
+            model = cfg.grading.judge_model or "glm-5"
+            base_url = cfg.grading.judge_base_url or "https://open.bigmodel.cn/api/paas/v4"
+            backend = OpenAICompatBackend(
+                api_key=api_key,
+                base_url=base_url,
+                model=model,
+                extra_body=cfg.grading.judge_config,
             )
+            return LLMRubricJudge(backend)
         return MockRubricJudge()
 
     def analyze(self, run_id: str) -> list[FailureDiagnosis]:
